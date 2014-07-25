@@ -1,0 +1,261 @@
+<?php
+/**
+ * @file
+ * The functions for the Email Signups module.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function emailmanager_signups_permission() {
+  return array(
+    'access emailmanager_signups page' => array(
+      'title' => t('Access emailmanager signups page'),
+      'description' => t('Allow users to access emailmanager signups page'),
+    ),
+    'access emailmanager_signups form' => array(
+      'title' => t('Access emailmanager signups form'),
+      'description' => t('Allow users to access emailmanager signups form'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function emailmanager_signups_menu() {
+  $items['admin/content/emailmanager_signups'] = array(
+    'title' => 'Mailing',
+    'page callback' => 'page_emailmanager_signups',
+    'access arguments' => array('access emailmanager_signups page'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/content/emailmanager_signups/export'] = array(
+    'title' => 'Export mailing',
+    'page callback' => 'page_emailmanager_signups_export',
+    'access arguments' => array('access emailmanager_signups page'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Constructs a page.
+ * The simple page callback, mapped to the path 'admin/content/email_signups'.
+ */
+function page_emailmanager_signups() {
+  $header = array(
+    array('data' => t('Name'), 'field' => 'name'),
+    array('data' => t('Email'), 'field' => 'email'),
+    array('data' => t('Created'), 'field' => 'created', 'sort' => 'desc'),
+  );
+  $sql = db_select('emailmanager_signups')
+    ->fields('emailmanager_signups', array('email', 'created'))
+    ->fields('emailmanager_signups', array('name', 'created'))
+    // ->orderBy('email', 'DESC')
+    ->extend('TableSort')
+    ->orderByHeader($header);
+
+  $result = $sql->execute();
+
+  foreach ($result as $row) {
+    $created = gmdate("d/m/Y H:i:s", $row->created);
+    $rows[] = array($row->name, $row->email, $created);
+  }
+
+  $per_page = 20;
+  // Initialize the pager
+  $current_page = pager_default_initialize(count($rows), $per_page);
+  // Split your list into page sized chunks
+  $chunks = array_chunk($rows, $per_page, TRUE);
+  // Show the appropriate items from the list
+  $output = theme('table', array('header' => $header, 'rows' => $chunks[$current_page], 'sticky' => TRUE, 'empty' => 'No registered mail.'));
+  // Show the pager
+  $output .= theme('pager', array('quantity', count($rows)));
+  return $output;
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter(&$data, $router_item, $root_path).
+ */
+//  function emailmanager_signups_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+//   if ($root_path == 'admin/content/emailmanager_signups') {
+//     // Add an action linking to node/add to all pages.
+//     $data['actions']['output'][] = array(
+//       '#theme' => 'menu_local_task',
+//       '#link' => array(
+//         'title' => t('Export mailing'),
+//         'href' => 'admin/content/emailmanager_signups/export',
+//         'localized_options' => array(
+//           'attributes' => array(
+//             'title' => t('Export mailing'),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+/**
+ * The simple page callback, mapped to the path 'admin/content/email_signups/export'.
+ */
+function page_emailmanager_signups_export() {
+  $xls_output = '';
+  $sql = db_select('emailmanager_signups')
+    ->fields('emailmanager_signups', array('name', 'created'))
+    ->fields('emailmanager_signups', array('email', 'created'))
+    ->orderBy('created', 'DESC');
+
+  $result = $sql->execute();
+  
+  foreach ($result as $row) {
+    $name = $row->name;
+    $email = $row->email;
+    $created = gmdate("d/m/Y H:i:s", $row->created);
+    $row_xls_output .= "" . $name . "" . "\t" . "" . $email . "" . "\t" . "" . $created . "" . "\r";
+  } 
+  
+  $xls_output .= $row_xls_output;
+  header("Content-Type: application/xls");
+  header("Content-Disposition: attachment; filename=export_mailing.xls");
+  print $xls_output;
+  exit; 
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function emailmanager_signups_block_info() {
+  $blocks = array();
+  $blocks['emailmanager_signups_form'] = array(
+    'info' => t('Emailmanager form'),
+  ); 
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function emailmanager_signups_block_view($delta='') {
+  if (user_access('access emailmanager_signups form')) {
+    $block = array(); 
+    switch ($delta) {
+      case 'emailmanager_signups_form':
+        $block['subject'] = t('Emailmanager form');
+        $block['content'] = drupal_get_form('emailmanager_signups_form');
+      break;
+    }
+    return $block;
+  }
+}
+
+/**
+ * Implements hook_form($form, &$form_state).
+ */
+function emailmanager_signups_form($form, &$form_state) {
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Name'),
+    '#default_value' => '',
+    '#attributes' => array(
+      'placeholder' => t('Insert your Name'),
+    ),
+    '#size' => 25,
+    '#maxlength' => 254,
+  );
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+    '#default_value' => '',
+    '#attributes' => array(
+      'placeholder' => t('Insert your Email'),
+    ),
+    '#size' => 25,
+    '#maxlength' => 254,
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+    '#ajax' => array(
+      'callback' => 'emailmanager_signups_ajax_submit',
+      'wrapper' => 'emailmanager-signups-form',
+      'method' => 'replace',
+      'effect' => 'fade',
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Submit Ajax function for email_signups_form($form, &$form_state, &$vars).
+ */
+function emailmanager_signups_ajax_submit($form, &$form_state, &$vars) {
+  // validate the form
+  drupal_validate_form('emailmanager_signups_form', $form, $form_state);
+  // if there are errors, return the form to display the error messages
+  if (form_get_errors()) {
+    $form_state['rebuild'] = TRUE;
+    return $form;
+  }
+  // process the form
+  $get_message = drupal_get_messages('status');
+  $message = "<div class=\"messages status\">" . $get_message['status'][0] . "</div>";
+  $build_message = array(
+    '#markup' => $message
+  );
+  $output = array($build_message, $form);
+  // return the confirmation message
+  return $output;
+}
+
+/**
+ * Validation function for email_signups_form($form, &$form_state).
+ */
+function emailmanager_signups_form_validate($form, &$form_state) {
+  $email = $form_state['values']['email'];
+  if (valid_email_address($email) == 0) {
+    form_set_error('email', t('Not a valid email address'));
+  }
+  $sql = db_select('emailmanager_signups')
+    ->fields('emailmanager_signups', array('email'))
+    ->condition('email', $email)
+    ->countQuery()
+    ->execute()
+    ->fetchField();
+  if ($sql >= 1) {
+    form_set_error('email', t('This email address is alredy subscribed.'));
+  }
+}
+
+/**
+ * Submit function for email_signups_form($form, &$form_state) in database.
+ */
+function emailmanager_signups_form_submit($form, &$form_state) {
+  $sql = db_insert('emailmanager_signups')
+    ->fields(array(
+      'name' => $form['name']['#value'],
+      'email' => $form['email']['#value'],
+      'created' => REQUEST_TIME
+    ))
+    ->execute();
+
+  $name = $form_state['values']['name'];
+  $email = $form_state['values']['email'];
+  $url = 'http://app.emailmanager.com/form/';
+  $parametro = 'name='.$name.'&email='.$email.'&_form_data=17577.1..2.0.6b108';
+  //open connection
+  $ch = curl_init();
+  //set the url, number of POST vars, POST data
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $parametro);
+  curl_setopt($ch, CURLOPT_PROXY, '10.0.1.85');
+  curl_setopt($ch, CURLOPT_PROXYPORT, '3128');
+  //execute post
+  $result = curl_exec($ch);
+  //close connection
+  curl_close($ch);
+  
+  drupal_set_message(t('Thank you for subscribing, @email!', array('@email' => $email)), 'status');
+}

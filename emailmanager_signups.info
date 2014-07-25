@@ -1,0 +1,4 @@
+name = Emailmanager signups
+description = Block with subscription form on Emailmanager.
+core = 7.x
+version = 7.x-1.0
