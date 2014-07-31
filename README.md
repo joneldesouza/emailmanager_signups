@@ -1,4 +1,6 @@
-Email Signups
+Emailmanager Signups
 =============
 
-Drupal module for signup in newsletter with ajax
+Block with subscription form on Emailmanager.
+
+http://www.emailmanager.com/
