@@ -36,7 +36,33 @@ function emailmanager_signups_menu() {
     'access arguments' => array('access emailmanager_signups page'),
     'type' => MENU_CALLBACK,
   );
+  $items['admin/config/services/emailmanager'] = array(
+    'title' => 'Emailmanager',
+    'description' => 'Configures the form ID Emailmanager',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('emailmanager_signups_admin'),
+    'access arguments' => array('administer emailmanager'),
+    'type' => MENU_NORMAL_ITEM,
+  );
   return $items;
+}
+
+/**
+ * Implements hook_admin().
+ */
+function emailmanager_signups_admin() {
+  $form = array();
+  $form['emailmanager_signups_formid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Form ID Emailmanager'),
+    '#default_value' => variable_get('emailmanager_signups_formid', ''),
+    '#size' => 40,
+    '#maxlength' => 255,
+    '#description' => t('Form ID to save signups in Emailmanager.'),
+    '#required' => TRUE,
+  );
+
+  return system_settings_form($form);
 }
 
 /**
@@ -78,23 +104,23 @@ function page_emailmanager_signups() {
 /**
  * Implements hook_menu_local_tasks_alter(&$data, $router_item, $root_path).
  */
-//  function emailmanager_signups_menu_local_tasks_alter(&$data, $router_item, $root_path) {
-//   if ($root_path == 'admin/content/emailmanager_signups') {
-//     // Add an action linking to node/add to all pages.
-//     $data['actions']['output'][] = array(
-//       '#theme' => 'menu_local_task',
-//       '#link' => array(
-//         'title' => t('Export mailing'),
-//         'href' => 'admin/content/emailmanager_signups/export',
-//         'localized_options' => array(
-//           'attributes' => array(
-//             'title' => t('Export mailing'),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
+function emailmanager_signups_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+ if ($root_path == 'admin/content/emailmanager_signups') {
+   // Add an action linking to node/add to all pages.
+   $data['actions']['output'][] = array(
+     '#theme' => 'menu_local_task',
+     '#link' => array(
+       'title' => t('Export mailing'),
+       'href' => 'admin/content/emailmanager_signups/export',
+       'localized_options' => array(
+         'attributes' => array(
+           'title' => t('Export mailing'),
+         ),
+       ),
+     ),
+   );
+ }
+}
 
 /**
  * The simple page callback, mapped to the path 'admin/content/email_signups/export'.
@@ -107,19 +133,19 @@ function page_emailmanager_signups_export() {
     ->orderBy('created', 'DESC');
 
   $result = $sql->execute();
-  
+
   foreach ($result as $row) {
     $name = $row->name;
     $email = $row->email;
     $created = gmdate("d/m/Y H:i:s", $row->created);
     $row_xls_output .= "" . $name . "" . "\t" . "" . $email . "" . "\t" . "" . $created . "" . "\r";
-  } 
-  
+  }
+
   $xls_output .= $row_xls_output;
   header("Content-Type: application/xls");
   header("Content-Disposition: attachment; filename=export_mailing.xls");
   print $xls_output;
-  exit; 
+  exit;
 }
 
 /**
@@ -129,7 +155,7 @@ function emailmanager_signups_block_info() {
   $blocks = array();
   $blocks['emailmanager_signups_form'] = array(
     'info' => t('Emailmanager form'),
-  ); 
+  );
   return $blocks;
 }
 
@@ -138,7 +164,7 @@ function emailmanager_signups_block_info() {
  */
 function emailmanager_signups_block_view($delta='') {
   if (user_access('access emailmanager_signups form')) {
-    $block = array(); 
+    $block = array();
     switch ($delta) {
       case 'emailmanager_signups_form':
         $block['subject'] = t('Emailmanager form');
@@ -243,7 +269,8 @@ function emailmanager_signups_form_submit($form, &$form_state) {
   $name = $form_state['values']['name'];
   $email = $form_state['values']['email'];
   $url = 'http://app.emailmanager.com/form/';
-  $parametro = 'name='.$name.'&email='.$email.'&_form_data=17577.1..2.0.6b108';
+  $form_data = variable_get('emailmanager_signups_formid');
+  $parametro = 'name='. $name .'&email='. $email .'&_form_data='. $form_data;
   //open connection
   $ch = curl_init();
   //set the url, number of POST vars, POST data
@@ -256,6 +283,6 @@ function emailmanager_signups_form_submit($form, &$form_state) {
   $result = curl_exec($ch);
   //close connection
   curl_close($ch);
-  
+
   drupal_set_message(t('Thank you for subscribing, @email!', array('@email' => $email)), 'status');
 }

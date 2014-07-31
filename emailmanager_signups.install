@@ -3,7 +3,29 @@
  * @file
  * Install, update, and uninstall functions for the Email Signups module.
  */
- 
+
+/**
+ * Implements hook_requirements().
+ */
+function mailrelay_requirements($phase) {
+  $has_curl = function_exists('curl_init');
+  $requirements = array();
+  $t = get_t();
+  $requirements['curl'] = array(
+    'title' => $t('cURL'),
+    'value' => $has_curl ? $t('Enabled') : $t('Not found'),
+  );
+  if (!$has_curl) {
+    $requirements['curl']['severity'] = REQUIREMENT_ERROR;
+    $requirements['curl']['description'] = $t('The Emailmanager signup module could not be installed because the PHP <a href="@curl">cURL</a> library is not available.', array('@curl' => 'http://php.net/manual/curl.setup.php'));
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implementation of hook_schema().
+ */
 function emailmanager_signups_schema() {
   $schema['emailmanager_signups'] = array(
     'description' => 'The base table for subscriptions.',
@@ -41,6 +63,17 @@ function emailmanager_signups_schema() {
   return $schema;
 }
 
+/**
+ * Implements hook_install().
+ */
+function emailmanager_signups_install() {
+  $t = get_t();
+  drupal_set_message($t("Emailmanager settings are available under !link",
+    array( '!link' => l(t('Administer > Configuration > Emailmanager'),  'admin/config/services/emailmanager'))
+  ));
+}
+
 function emailmanager_signups_uninstall() {
   drupal_uninstall_schema('emailmanager_signups');
+  variable_del('emailmanager_signups_formid');
 }
