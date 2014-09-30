@@ -24,6 +24,13 @@ function emailmanager_signups_permission() {
  * Implements hook_menu().
  */
 function emailmanager_signups_menu() {
+  $items['newsletter'] = array(
+    'title' => 'Newsletter',
+    'description' => 'Cadastre-se e receba as melhores ofertas.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('emailmanager_signups_form'),
+    'access arguments' => array('access emailmanager_signups form'),
+  );
   $items['admin/content/emailmanager_signups'] = array(
     'title' => 'Mailing',
     'page callback' => 'page_emailmanager_signups',
