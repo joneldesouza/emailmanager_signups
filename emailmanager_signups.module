@@ -25,8 +25,8 @@ function emailmanager_signups_permission() {
  */
 function emailmanager_signups_menu() {
   $items['newsletter'] = array(
-    'title' => 'Newsletter',
-    'description' => 'Cadastre-se e receba as melhores ofertas.',
+    'title' => t('Newsletter'),
+    'description' => t('Register now and receive the best deals.'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('emailmanager_signups_form'),
     'access arguments' => array('access emailmanager_signups form'),
@@ -277,15 +277,13 @@ function emailmanager_signups_form_submit($form, &$form_state) {
   $email = $form_state['values']['email'];
   $url = 'http://app.emailmanager.com/form/';
   $form_data = variable_get('emailmanager_signups_formid');
-  $parametro = 'name='. $name .'&email='. $email .'&_form_data='. $form_data;
+  $parameter = 'name='. $name .'&email='. $email .'&_form_data='. $form_data;
   //open connection
   $ch = curl_init();
   //set the url, number of POST vars, POST data
   curl_setopt($ch, CURLOPT_URL, $url);
   curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $parametro);
-  curl_setopt($ch, CURLOPT_PROXY, '10.0.1.85');
-  curl_setopt($ch, CURLOPT_PROXYPORT, '3128');
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $parameter);
   //execute post
   $result = curl_exec($ch);
   //close connection
