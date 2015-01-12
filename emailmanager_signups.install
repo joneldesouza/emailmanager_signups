@@ -7,7 +7,7 @@
 /**
  * Implements hook_requirements().
  */
-function mailrelay_requirements($phase) {
+function emailmanager_signups_requirements($phase) {
   $has_curl = function_exists('curl_init');
   $requirements = array();
   $t = get_t();
